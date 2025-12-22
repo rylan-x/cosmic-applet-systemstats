@@ -1,4 +1,5 @@
 pub mod cpu;
+pub mod gpu;
 pub mod memory;
 pub mod network;
 pub mod temperature;
@@ -8,6 +9,7 @@ pub struct MonitorStats {
     pub memory: memory::MemoryStats,
     pub network: network::NetworkStats,
     pub temperature: temperature::TemperatureStats,
+    pub gpu: gpu::GpuStats,
 }
 
 impl MonitorStats {
@@ -17,6 +19,7 @@ impl MonitorStats {
             memory: memory::MemoryStats::new(),
             network: network::NetworkStats::new(),
             temperature: temperature::TemperatureStats::new(),
+            gpu: gpu::GpuStats::new(),
         }
     }
 
@@ -25,5 +28,6 @@ impl MonitorStats {
         self.memory.update();
         self.network.update();
         self.temperature.update();
+        self.gpu.update();
     }
 }

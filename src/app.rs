@@ -71,9 +71,14 @@ impl cosmic::Application for SystemStats {
             upload_mbps
         ));
 
-        // Add temperature if available
+        // Add CPU temperature if available
         if let Some(temp) = self.monitors.temperature.cpu_celsius() {
-            stats_text.push_str(&format!(" | {:.0}°C", temp));
+            stats_text.push_str(&format!(" | CPU {:.0}°C", temp));
+        }
+
+        // Add GPU temperature if available
+        if let Some(max_temp) = self.monitors.gpu.max_temp() {
+            stats_text.push_str(&format!(" | GPU {:.0}°C", max_temp));
         }
 
         let elements = vec![
@@ -87,7 +92,7 @@ impl cosmic::Application for SystemStats {
             .align_y(Alignment::Center);
 
         let limits = Limits::NONE
-            .max_width(400.0)
+            .max_width(600.0)
             .min_height(1.0)
             .max_height(128.0);
 
