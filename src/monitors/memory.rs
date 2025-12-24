@@ -6,8 +6,8 @@ pub struct MemoryStats {
 
 impl MemoryStats {
     pub fn new() -> Self {
-        let mut system = System::new_all();
-        system.refresh_all();
+        let mut system = System::new();
+        system.refresh_memory();
 
         Self { system }
     }

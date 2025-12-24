@@ -6,10 +6,8 @@ pub struct CpuStats {
 
 impl CpuStats {
     pub fn new() -> Self {
-        let mut system = System::new_all();
-        system.refresh_all();
-        // Initialize CPU usage tracking
-        system.global_cpu_usage();
+        let mut system = System::new();
+        system.refresh_cpu_usage();
 
         Self { system }
     }

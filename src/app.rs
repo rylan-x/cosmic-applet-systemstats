@@ -55,9 +55,24 @@ impl cosmic::Application for SystemStats {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
+        // Add CPU temperature if available
+        let cpu_stat = if let Some(temp) = self.monitors.temperature.cpu_celsius() {
+            format!("CPU: {:.0}% | {:.0}°C", self.monitors.cpu.usage(), temp)
+        } else {
+            format!("CPU: {:.0}%", self.monitors.cpu.usage())
+        };
+
+        // Add GPU temperature if available
+        let gpu_stat = if let Some(temp) = self.monitors.temperature.gpu_celsius() {
+            format!(" | GPU: {:.0}°C", temp)
+        } else {
+            String::new()
+        };
+
         let mut stats_text = format!(
-            "CPU: {:.0}% | RAM: {:.1}/{:.1} GB",
-            self.monitors.cpu.usage(),
+            "{}{} | RAM: {:.1}/{:.1} GB",
+            cpu_stat,
+            gpu_stat,
             self.monitors.memory.used_gb(),
             self.monitors.memory.total_gb()
         );
@@ -66,20 +81,10 @@ impl cosmic::Application for SystemStats {
         // Convert bytes per second to Mbps (1 Mbps = 125,000 bytes/sec)
         let download_mbps = self.monitors.network.download_bps() as f32 / 125_000.0;
         let upload_mbps = self.monitors.network.upload_bps() as f32 / 125_000.0;
-        stats_text.push_str(&format!(" | ↓{:.1} ↑{:.1} Mbps",
+        stats_text.push_str(&format!(" | Net: ↓{:.1} ↑{:.1} Mbps",
             download_mbps,
             upload_mbps
         ));
-
-        // Add CPU temperature if available
-        if let Some(temp) = self.monitors.temperature.cpu_celsius() {
-            stats_text.push_str(&format!(" | CPU {:.0}°C", temp));
-        }
-
-        // Add GPU temperature if available
-        if let Some(max_temp) = self.monitors.gpu.max_temp() {
-            stats_text.push_str(&format!(" | GPU {:.0}°C", max_temp));
-        }
 
         let elements = vec![
             text(stats_text)
