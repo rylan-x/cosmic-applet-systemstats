@@ -14,7 +14,19 @@ impl TemperatureStats {
             components,
             gpu_temp_celsius: None,
         };
+
+        if let Some(temp) = stats.cpu_celsius() {
+            log::info!("CPU temperature sensor detected: {:.1}°C", temp);
+        } else {
+            log::warn!("No CPU temperature sensor found (searched: cpu, tdie, tctl, core labels)");
+        }
+
         stats.update_gpu();
+
+        if let Some(temp) = stats.gpu_temp_celsius {
+            log::info!("GPU temperature sensor detected: {:.1}°C", temp);
+        }
+
         stats
     }
 
@@ -110,7 +122,7 @@ impl TemperatureStats {
 
     fn detect_nvidia_gpu_temp(&self) -> Option<f32> {
         let output = Command::new("nvidia-smi")
-            .args(&["--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"])
+            .args(["--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"])
             .output();
 
         if let Ok(output) = output {

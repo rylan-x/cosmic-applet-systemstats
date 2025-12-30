@@ -7,6 +7,7 @@ use cosmic::widget::{autosize, text};
 use cosmic::Element;
 use std::time::Duration;
 
+use crate::formatting::*;
 use crate::monitors::MonitorStats;
 
 const ID: &str = "com.github.rylan-x.systemstats";
@@ -57,33 +58,32 @@ impl cosmic::Application for SystemStats {
     fn view(&self) -> Element<'_, Self::Message> {
         // Add CPU temperature if available
         let cpu_stat = if let Some(temp) = self.monitors.temperature.cpu_celsius() {
-            format!("CPU: {:.0}% | {:.0}°C", self.monitors.cpu.usage(), temp)
+            format!("CPU: {} | {}",
+                format_percentage(self.monitors.cpu.usage()),
+                format_celsius(temp))
         } else {
-            format!("CPU: {:.0}%", self.monitors.cpu.usage())
+            format!("CPU: {}", format_percentage(self.monitors.cpu.usage()))
         };
 
         // Add GPU temperature if available
         let gpu_stat = if let Some(temp) = self.monitors.temperature.gpu_celsius() {
-            format!(" | GPU: {:.0}°C", temp)
+            format!(" | GPU: {}", format_celsius(temp))
         } else {
             String::new()
         };
 
         let mut stats_text = format!(
-            "{}{} | RAM: {:.1}/{:.1} GB",
+            "{}{} | RAM: {}/{}",
             cpu_stat,
             gpu_stat,
-            self.monitors.memory.used_gb(),
-            self.monitors.memory.total_gb()
+            format_memory_gb(self.monitors.memory.used_gb()),
+            format_memory_gb(self.monitors.memory.total_gb())
         );
 
-        // Add network stats with compact symbol format
-        // Convert bytes per second to Mbps (1 Mbps = 125,000 bytes/sec)
-        let download_mbps = self.monitors.network.download_bps() as f32 / 125_000.0;
-        let upload_mbps = self.monitors.network.upload_bps() as f32 / 125_000.0;
-        stats_text.push_str(&format!(" | Net: ↓{:.1} ↑{:.1} Mbps",
-            download_mbps,
-            upload_mbps
+        // Add network stats with smart unit formatting
+        stats_text.push_str(&format!(" | Net: ↓{} ↑{}",
+            format_network_speed(self.monitors.network.download_bps()),
+            format_network_speed(self.monitors.network.upload_bps())
         ));
 
         let elements = vec![

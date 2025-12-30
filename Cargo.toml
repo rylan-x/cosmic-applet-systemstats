@@ -1,10 +1,13 @@
 [package]
 name = "cosmic-applet-systemstats"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 license = "GPL-3.0"
 
 [dependencies]
+log = "0.4"
+systemd-journal-logger = "2.2"
+fern = "0.7"
 sysinfo = "0.37"
 
 [dependencies.libcosmic]

@@ -42,6 +42,12 @@ impl NetworkStats {
             }
         }
 
+        if let Some(ref iface) = primary_interface {
+            log::info!("Network interface detected: {}", iface);
+        } else {
+            log::warn!("No network interface found");
+        }
+
         Self {
             networks,
             primary_interface,
@@ -74,7 +80,7 @@ impl NetworkStats {
                 self.prev_rx_bytes = current_rx;
                 self.prev_tx_bytes = current_tx;
             } else {
-                // Interface disappeared, set speeds to 0
+                log::warn!("Network interface disappeared");
                 self.rx_bytes_per_sec = 0;
                 self.tx_bytes_per_sec = 0;
             }
