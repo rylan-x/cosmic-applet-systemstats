@@ -3,6 +3,8 @@ pub mod memory;
 pub mod network;
 pub mod temperature;
 
+use crate::config::Config;
+
 pub struct MonitorStats {
     pub cpu: cpu::CpuStats,
     pub memory: memory::MemoryStats,
@@ -11,7 +13,7 @@ pub struct MonitorStats {
 }
 
 impl MonitorStats {
-    pub fn new() -> Self {
+    pub fn new(_config: &Config) -> Self {
         Self {
             cpu: cpu::CpuStats::new(),
             memory: memory::MemoryStats::new(),
@@ -20,10 +22,21 @@ impl MonitorStats {
         }
     }
 
-    pub fn update(&mut self) {
-        self.cpu.update();
-        self.memory.update();
-        self.network.update();
-        self.temperature.update();
+    pub fn update(&mut self, config: &Config) {
+        if config.monitors.cpu_usage {
+            self.cpu.update();
+        }
+
+        if config.monitors.memory {
+            self.memory.update();
+        }
+
+        if config.monitors.network {
+            self.network.update();
+        }
+
+        if config.monitors.cpu_temperature || config.monitors.gpu_temperature {
+            self.temperature.update();
+        }
     }
 }

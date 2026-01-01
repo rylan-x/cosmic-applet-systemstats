@@ -7,15 +7,16 @@ use cosmic::widget::{autosize, text};
 use cosmic::Element;
 use std::time::Duration;
 
+use crate::config::Config;
 use crate::formatting::*;
 use crate::monitors::MonitorStats;
 
 const ID: &str = "com.github.rylan-x.systemstats";
 
-/// Main applet struct
 pub struct SystemStats {
     core: Core,
     monitors: MonitorStats,
+    config: Config,
 }
 
 /// Messages the applet can receive
@@ -26,7 +27,7 @@ pub enum Message {
 
 impl cosmic::Application for SystemStats {
     type Executor = cosmic::executor::Default;
-    type Flags = ();
+    type Flags = Config;
     type Message = Message;
     const APP_ID: &'static str = ID;
 
@@ -38,10 +39,11 @@ impl cosmic::Application for SystemStats {
         &mut self.core
     }
 
-    fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Self::Message>) {
+    fn init(core: Core, config: Self::Flags) -> (Self, Task<Self::Message>) {
         let app = SystemStats {
             core,
-            monitors: MonitorStats::new(),
+            monitors: MonitorStats::new(&config),
+            config,
         };
         (app, Task::none())
     }
@@ -49,42 +51,56 @@ impl cosmic::Application for SystemStats {
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
             Message::Tick => {
-                self.monitors.update();
+                self.monitors.update(&self.config);
             }
         }
         Task::none()
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        // Add CPU temperature if available
-        let cpu_stat = if let Some(temp) = self.monitors.temperature.cpu_celsius() {
-            format!("CPU: {} | {}",
-                format_percentage(self.monitors.cpu.usage()),
-                format_celsius(temp))
-        } else {
-            format!("CPU: {}", format_percentage(self.monitors.cpu.usage()))
-        };
+        let mut parts = Vec::new();
 
-        // Add GPU temperature if available
-        let gpu_stat = if let Some(temp) = self.monitors.temperature.gpu_celsius() {
-            format!(" | GPU: {}", format_celsius(temp))
-        } else {
-            String::new()
-        };
+        // CPU
+        if self.config.monitors.cpu_usage || self.config.monitors.cpu_temperature {
+            let mut cpu_parts = Vec::new();
 
-        let mut stats_text = format!(
-            "{}{} | RAM: {}/{}",
-            cpu_stat,
-            gpu_stat,
-            format_memory_gb(self.monitors.memory.used_gb()),
-            format_memory_gb(self.monitors.memory.total_gb())
-        );
+            if self.config.monitors.cpu_usage {
+                cpu_parts.push(format_percentage(self.monitors.cpu.usage()));
+            }
 
-        // Add network stats with smart unit formatting
-        stats_text.push_str(&format!(" | Net: ↓{} ↑{}",
-            format_network_speed(self.monitors.network.download_bps()),
-            format_network_speed(self.monitors.network.upload_bps())
-        ));
+            if self.config.monitors.cpu_temperature {
+                if let Some(temp) = self.monitors.temperature.cpu_celsius() {
+                    cpu_parts.push(format_celsius(temp));
+                }
+            }
+
+            if !cpu_parts.is_empty() {
+                parts.push(format!("CPU: {}", cpu_parts.join(" | ")));
+            }
+        }
+
+        // GPU temperature 
+        if self.config.monitors.gpu_temperature {
+            if let Some(temp) = self.monitors.temperature.gpu_celsius() {
+                parts.push(format!("GPU: {}", format_celsius(temp)));
+            }
+        }
+
+        // Memory
+        if self.config.monitors.memory {
+            parts.push(format!("RAM: {}/{}",
+                format_memory_gb(self.monitors.memory.used_gb()),
+                format_memory_gb(self.monitors.memory.total_gb())));
+        }
+
+        // Network
+        if self.config.monitors.network {
+            parts.push(format!("Net: ↓{} ↑{}",
+                format_network_speed(self.monitors.network.download_bps()),
+                format_network_speed(self.monitors.network.upload_bps())));
+        }
+
+        let stats_text = parts.join(" | ");
 
         let elements = vec![
             text(stats_text)
@@ -111,6 +127,6 @@ impl cosmic::Application for SystemStats {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(Duration::from_secs(1)).map(|_| Message::Tick)
+        time::every(Duration::from_millis(self.config.refresh_interval_ms)).map(|_| Message::Tick)
     }
 }
