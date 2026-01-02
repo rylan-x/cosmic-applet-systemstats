@@ -30,7 +30,7 @@ sudo dpkg -i cosmic-applet-systemstats_1.0.0-1_amd64.deb
 
 **.flatpak package:**
 ```bash
-flatpak install cosmic-applet-systemstats.flatpak
+flatpak install --user cosmic-applet-systemstats.flatpak
 ```
 
 <!-- ### From Flathub
