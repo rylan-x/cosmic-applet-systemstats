@@ -1,3 +1,23 @@
 # Build artifacts
 /target/
 /debug/
+
+# Debian packaging artifacts
+/debian/.debhelper/
+/debian/cosmic-applet-systemstats/
+/debian/files
+/debian/*.log
+/debian/*.substvars
+/debian/debhelper-build-stamp
+/*.deb
+/*.dsc
+/*.tar.*
+/*.changes
+/*.buildinfo
+
+# Flatpak artifacts
+/flatpak/build-dir/
+/flatpak/cargo-sources.json
+/.flatpak-builder/
+*.flatpak
+*.log

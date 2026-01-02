@@ -1,0 +1,11 @@
+cosmic-applet-systemstats (1.0.0-1) UNRELEASED; urgency=medium
+
+  * Initial release
+  * CPU usage monitoring
+  * Memory usage monitoring
+  * Network speed monitoring (upload/download)
+  * CPU and GPU temperature monitoring
+  * TOML configuration system
+  * Configurable refresh interval
+
+ -- Rylan <rylan-x@users.noreply.github.com>  Thu, 02 Jan 2026 00:00:00 +0000

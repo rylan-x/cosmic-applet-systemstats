@@ -1,0 +1,34 @@
+Source: cosmic-applet-systemstats
+Section: admin
+Priority: optional
+Maintainer: Rylan <rylan-x@users.noreply.github.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ rustc (>= 1.73.0),
+ cargo,
+ libdbus-1-dev,
+ libegl-dev,
+ libwayland-dev,
+ libxkbcommon-dev,
+ pkg-config,
+ just
+Standards-Version: 4.6.2
+Homepage: https://github.com/rylan-x/cosmic-applet-systemstats
+Vcs-Git: https://github.com/rylan-x/cosmic-applet-systemstats.git
+Vcs-Browser: https://github.com/rylan-x/cosmic-applet-systemstats
+
+Package: cosmic-applet-systemstats
+Architecture: amd64 arm64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: System monitoring applet for COSMIC desktop
+ A lightweight system monitoring applet for the COSMIC desktop environment
+ that displays CPU usage, memory, network speeds, and CPU/GPU temperatures
+ in the system tray.
+ .
+ Features:
+  - CPU usage percentage monitoring
+  - Memory usage in GB
+  - Network upload/download speeds
+  - CPU and GPU temperature monitoring
+  - Configurable refresh interval
+  - Toggle individual monitors via TOML configuration

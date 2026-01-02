@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	just build-release
+
+override_dh_auto_install:
+	install -Dm755 target/release/cosmic-applet-systemstats debian/cosmic-applet-systemstats/usr/bin/cosmic-applet-systemstats
+	install -Dm644 res/io.github.rylan_x.cosmic-applet-systemstats.desktop debian/cosmic-applet-systemstats/usr/share/applications/io.github.rylan_x.cosmic-applet-systemstats.desktop
+	install -Dm644 res/systemstats-icon.svg debian/cosmic-applet-systemstats/usr/share/icons/hicolor/scalable/apps/systemstats-icon.svg
+
+override_dh_auto_clean:
+	just clean || true
+	dh_auto_clean

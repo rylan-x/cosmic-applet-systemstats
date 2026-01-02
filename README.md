@@ -14,28 +14,34 @@ A lightweight system monitoring applet for the COSMIC desktop environment.
 
 ## Installation
 
-### Building using just
-
-Dependencies:
-
-```bash
-sudo apt install just libxkbcommon-dev
-```
-
-Install:
+### Build and Install
 
 ```bash
 just build-release
 sudo just install
 ```
 
-### Building from source
+### From Package
+
+**.deb package:**
 ```bash
-cargo build --release
-sudo install -Dm755 target/release/cosmic-applet-systemstats /usr/bin/cosmic-applet-systemstats
-sudo install -Dm644 res/com.github.rylan-x.systemstats.desktop /usr/share/applications/com.github.rylan-x.systemstats.desktop
-sudo install -Dm644 res/systemstats-icon.svg /usr/share/icons/hicolor/scalable/apps/systemstats-icon.svg
+sudo dpkg -i cosmic-applet-systemstats_1.0.0-1_amd64.deb
 ```
+
+**.flatpak package:**
+```bash
+flatpak install cosmic-applet-systemstats.flatpak
+```
+
+<!-- ### From Flathub
+```bash
+flatpak install flathub io.github.rylan_x.cosmic-applet-systemstats
+```
+-->
+
+<!-- ### From COSMIC Store
+Find "System Stats" in the COSMIC Store under COSMIC Applets.
+-->
 
 ## Configuration
 
