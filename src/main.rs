@@ -1,4 +1,5 @@
 mod app;
+mod color;
 mod config;
 mod formatting;
 mod monitors;

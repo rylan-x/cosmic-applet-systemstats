@@ -1,67 +1,57 @@
 use sysinfo::Networks;
+use std::collections::HashMap;
 
-pub struct NetworkStats {
-    networks: Networks,
-    primary_interface: Option<String>,
+struct InterfaceStats {
     prev_rx_bytes: u64,
     prev_tx_bytes: u64,
     rx_bytes_per_sec: u64,
     tx_bytes_per_sec: u64,
 }
 
+pub struct NetworkStats {
+    networks: Networks,
+    monitored_interfaces: HashMap<String, InterfaceStats>,
+}
+
 impl NetworkStats {
     pub fn new() -> Self {
         let networks = Networks::new_with_refreshed_list();
-        let mut primary_interface = None;
-        let mut prev_rx_bytes = 0;
-        let mut prev_tx_bytes = 0;
+        let mut monitored_interfaces = HashMap::new();
 
-        // Detect primary network interface
-        // First, try to find a non-loopback interface with traffic
+        // Monitor all non-loopback interfaces (both wired and wireless)
         for (interface_name, data) in &networks {
             if interface_name == "lo" {
                 continue;
             }
-            if data.total_received() > 0 || data.total_transmitted() > 0 {
-                primary_interface = Some(interface_name.to_string());
-                prev_rx_bytes = data.total_received();
-                prev_tx_bytes = data.total_transmitted();
-                break;
-            }
+            log::info!("Monitoring network interface: {}", interface_name);
+            monitored_interfaces.insert(
+                interface_name.to_string(),
+                InterfaceStats {
+                    prev_rx_bytes: data.total_received(),
+                    prev_tx_bytes: data.total_transmitted(),
+                    rx_bytes_per_sec: 0,
+                    tx_bytes_per_sec: 0,
+                },
+            );
         }
 
-        // If no interface with traffic found, use first non-loopback interface
-        if primary_interface.is_none() {
-            for (interface_name, data) in &networks {
-                if interface_name != "lo" {
-                    primary_interface = Some(interface_name.to_string());
-                    prev_rx_bytes = data.total_received();
-                    prev_tx_bytes = data.total_transmitted();
-                    break;
-                }
-            }
-        }
-
-        if let Some(ref iface) = primary_interface {
-            log::info!("Network interface detected: {}", iface);
+        if monitored_interfaces.is_empty() {
+            log::warn!("No network interfaces found");
         } else {
-            log::warn!("No network interface found");
+            log::info!("Monitoring {} network interface(s)", monitored_interfaces.len());
         }
 
         Self {
             networks,
-            primary_interface,
-            prev_rx_bytes,
-            prev_tx_bytes,
-            rx_bytes_per_sec: 0,
-            tx_bytes_per_sec: 0,
+            monitored_interfaces,
         }
     }
 
     pub fn update(&mut self) {
         self.networks.refresh(false);
 
-        if let Some(ref interface_name) = self.primary_interface {
+        // Update stats for all monitored interfaces
+        for (interface_name, stats) in &mut self.monitored_interfaces {
             if let Some(data) = self
                 .networks
                 .iter()
@@ -73,29 +63,52 @@ impl NetworkStats {
 
                 // Calculate bytes per second (updates happen every 1 second)
                 // Use saturating_sub to handle counter wraparound
-                self.rx_bytes_per_sec = current_rx.saturating_sub(self.prev_rx_bytes);
-                self.tx_bytes_per_sec = current_tx.saturating_sub(self.prev_tx_bytes);
+                stats.rx_bytes_per_sec = current_rx.saturating_sub(stats.prev_rx_bytes);
+                stats.tx_bytes_per_sec = current_tx.saturating_sub(stats.prev_tx_bytes);
 
                 // Update previous values for next tick
-                self.prev_rx_bytes = current_rx;
-                self.prev_tx_bytes = current_tx;
+                stats.prev_rx_bytes = current_rx;
+                stats.prev_tx_bytes = current_tx;
             } else {
-                log::warn!("Network interface disappeared");
-                self.rx_bytes_per_sec = 0;
-                self.tx_bytes_per_sec = 0;
+                log::warn!("Network interface disappeared: {}", interface_name);
+                stats.rx_bytes_per_sec = 0;
+                stats.tx_bytes_per_sec = 0;
             }
-        } else {
-            // No interface available
-            self.rx_bytes_per_sec = 0;
-            self.tx_bytes_per_sec = 0;
+        }
+
+        // Handle new interfaces that appeared (e.g., USB ethernet adapter plugged in)
+        for (interface_name, data) in &self.networks {
+            if interface_name == "lo" {
+                continue;
+            }
+            if !self.monitored_interfaces.contains_key(interface_name) {
+                log::info!("New network interface detected: {}", interface_name);
+                self.monitored_interfaces.insert(
+                    interface_name.to_string(),
+                    InterfaceStats {
+                        prev_rx_bytes: data.total_received(),
+                        prev_tx_bytes: data.total_transmitted(),
+                        rx_bytes_per_sec: 0,
+                        tx_bytes_per_sec: 0,
+                    },
+                );
+            }
         }
     }
 
+    /// Total download speed across all interfaces (wired + wireless)
     pub fn download_bps(&self) -> u64 {
-        self.rx_bytes_per_sec
+        self.monitored_interfaces
+            .values()
+            .map(|stats| stats.rx_bytes_per_sec)
+            .sum()
     }
 
+    /// Total upload speed across all interfaces (wired + wireless)
     pub fn upload_bps(&self) -> u64 {
-        self.tx_bytes_per_sec
+        self.monitored_interfaces
+            .values()
+            .map(|stats| stats.tx_bytes_per_sec)
+            .sum()
     }
 }
