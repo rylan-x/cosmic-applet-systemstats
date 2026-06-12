@@ -24,6 +24,14 @@ impl LabelConfig {
     pub fn color_hex(&self) -> u32 {
         parse_hex_color(&self.color)
     }
+
+    /// True if this label's color should be resolved from the active theme's
+    /// foreground. Both an empty string and the literal "auto" (any case,
+    /// surrounding whitespace ignored) count as auto.
+    pub fn is_auto(&self) -> bool {
+        let c = self.color.trim();
+        c.is_empty() || c.eq_ignore_ascii_case("auto")
+    }
 }
 
 impl Default for LabelConfig {
@@ -324,6 +332,40 @@ impl Config {
         })
     }
 
+    /// Persist the current in-memory config to disk, atomically. The
+    /// on-disk format round-trips whatever is in each `LabelConfig.color`
+    /// field (empty string stays empty) — we never rewrite "" to "auto".
+    pub fn save(&self) -> std::io::Result<()> {
+        let Some(path) = Self::config_path() else {
+            log::warn!("No config dir; skipping save.");
+            return Ok(());
+        };
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        // DO NOT use unwrap_or_default(): a serialisation failure must not
+        // silently truncate the user's config to an empty file.
+        let toml_str = toml::to_string_pretty(self).map_err(|e| {
+            log::error!("Config serialisation failed: {e}");
+            std::io::Error::new(std::io::ErrorKind::InvalidData, e)
+        })?;
+        // Write atomically: write to a sibling tmp file, then rename. This
+        // avoids leaving a half-written config if the process is killed
+        // mid-write.
+        let mut tmp = path.clone();
+        tmp.set_extension("toml.tmp");
+        fs::write(&tmp, toml_str)?;
+        if let Err(e) = fs::rename(&tmp, &path) {
+            // Best-effort cleanup: if the rename fails (cross-device, race
+            // with another process, etc.), the tmp file would otherwise be
+            // left in the user's config dir permanently. Ignore secondary
+            // failure of the cleanup itself.
+            let _ = fs::remove_file(&tmp);
+            return Err(e);
+        }
+        Ok(())
+    }
+
     /// Create default config file
     fn create_default_config(path: &PathBuf, config: &Config) -> std::io::Result<()> {
         // Create parent directory if it doesn't exist
@@ -446,5 +488,25 @@ color = "{}"
         );
 
         fs::write(path, config_content)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_auto_detects_empty_and_keyword() {
+        assert!(LabelConfig { name: "".into(), color: "".into() }.is_auto());
+        assert!(LabelConfig { name: "".into(), color: "  ".into() }.is_auto());
+        assert!(LabelConfig { name: "".into(), color: "auto".into() }.is_auto());
+        assert!(LabelConfig { name: "".into(), color: "AUTO".into() }.is_auto());
+        assert!(!LabelConfig { name: "".into(), color: "00B4D8".into() }.is_auto());
+    }
+
+    #[test]
+    fn color_hex_handles_overrides() {
+        let c = LabelConfig { name: "".into(), color: "FF0000".into() };
+        assert_eq!(c.color_hex(), 0xFF0000);
     }
 }
